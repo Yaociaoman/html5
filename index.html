@@ -1,61 +1,188 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-  <style>
-    .btn-info {
-      height: 22px;
-      padding: 0 12px;
-      border-radius: 8px;
-      background: #ffffff;
-      border: 1px solid #2f2f2f;
-      font-family: 'Roboto', sans-serif;
-      font-size: 13px;
-      font-weight: 400;
-      color: #2f2f2f;
-      cursor: pointer;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Viewer</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    .detail-panel {
-      overflow: hidden;
-      max-height: 0;
-      transition: max-height 0.3s ease;
-    }
+  body {
+    font-family: 'Roboto', sans-serif;
+    background: #f3f3f3;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
 
-    .detail-panel.open {
-      max-height: 300px;
-    }
-  </style>
+  .container {
+    background: #fff;
+    border: 1px solid #ddd;
+    width: 520px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  .header {
+    background: #f6f6f6;
+    border-bottom: 1px solid #eaeaea;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 32px;
+  }
+
+  .header-title {
+    font-size: 13px;
+    color: #2f2f2f;
+    font-weight: 500;
+  }
+
+  /* Spec: h22/R8, bg #ffffff, border 1px #2f2f2f, color #2f2f2f, Roboto Regular 13px */
+  .btn-view {
+    height: 22px;
+    padding: 0 10px;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid #2f2f2f;
+    color: #2f2f2f;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .btn-view:hover { background: #2f2f2f; color: #ffffff; }
+  .btn-view:active { background: #111; border-color: #111; color: #fff; }
+
+  .preview-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #e0dbd2;
+  }
+
+  .preview-placeholder {
+    width: 450px;
+    height: 240px;
+    background: linear-gradient(160deg, #d4a853 0%, #a0692a 50%, #6b4518 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.75);
+    font-size: 13px;
+    gap: 8px;
+  }
+
+  .preview-placeholder .dim { font-size: 11px; opacity: 0.6; font-family: monospace; }
+
+  .info-panel {
+    border-top: 1px solid #eaeaea;
+    background: #f3f3f3;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.35s ease, opacity 0.25s ease;
+  }
+
+  .info-panel.visible { max-height: 220px; opacity: 1; }
+
+  .panel-inner { padding: 10px 20px 14px; }
+
+  .panel-top {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+  }
+
+  .btn-collapse {
+    height: 22px;
+    padding: 0 10px;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid #2f2f2f;
+    color: #2f2f2f;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .btn-collapse:hover { background: #2f2f2f; color: #fff; }
+
+  .scrollable {
+    max-height: 150px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #bbb transparent;
+  }
+
+  .info-row {
+    display: flex;
+    align-items: baseline;
+    padding: 4px 0;
+    border-bottom: 1px solid #e5e5e5;
+    font-size: 13px;
+    color: #2f2f2f;
+  }
+
+  .info-row:last-child { border-bottom: none; }
+  .info-label { min-width: 82px; color: #2f2f2f; }
+  .info-value { color: #2f2f2f; word-break: break-all; }
+  .info-value.num { color: #0084ff; }
+</style>
 </head>
 <body>
-
-  <button class="btn-info" id="toggleBtn" onclick="toggleInfo()">查看資訊</button>
-
-  <div class="detail-panel" id="detailPanel">
-    <!-- 詳細資訊內容放這裡 -->
-    <p>拍攝日期：2017/10/12</p>
-    <p>格式：.jpg</p>
-    <p>大小：456.97KB</p>
+<div class="container">
+  <div class="header">
+    <span class="header-title">預覽</span>
+    <button class="btn-view" id="toggleBtn" onclick="toggleInfo()">查看資訊</button>
   </div>
 
-  <script>
-    let isOpen = false;
+  <div class="preview-area">
+    <div class="preview-placeholder">
+      <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+        <rect x="3" y="7" width="38" height="30" rx="3" stroke="rgba(255,255,255,0.55)" stroke-width="1.8"/>
+        <circle cx="14" cy="17" r="3.5" stroke="rgba(255,255,255,0.55)" stroke-width="1.8"/>
+        <path d="M3 30 L13 20 L21 28 L29 20 L41 33" stroke="rgba(255,255,255,0.55)" stroke-width="1.8" fill="none" stroke-linejoin="round"/>
+      </svg>
+      <span>預覽圖片範圍</span>
+      <span class="dim">Default 450×240</span>
+    </div>
+  </div>
 
-    function toggleInfo() {
-      isOpen = !isOpen;
-      const panel = document.getElementById('detailPanel');
-      const btn = document.getElementById('toggleBtn');
+  <div class="info-panel" id="infoPanel">
+    <div class="panel-inner">
+      <div class="panel-top">
+        <button class="btn-collapse" onclick="toggleInfo()">收起資訊</button>
+      </div>
+      <div class="scrollable">
+        <div class="info-row"><span class="info-label">拍攝日期：</span><span class="info-value">2017/10/12</span></div>
+        <div class="info-row"><span class="info-label">類型：</span><span class="info-value">.jpg</span></div>
+        <div class="info-row"><span class="info-label">大小：</span><span class="info-value num">456.97KB</span></div>
+        <div class="info-row"><span class="info-label">路徑：</span><span class="info-value">\\designcenter.qnap.com.tw\DesignCenter\PM - RD 讀書人\WEB\Stations\A_image2PDF\w2\sample</span></div>
+      </div>
+    </div>
+  </div>
+</div>
 
-      if (isOpen) {
-        panel.classList.add('open');
-        btn.textContent = '收起資訊';
-      } else {
-        panel.classList.remove('open');
-        btn.textContent = '查看資訊';
-      }
-    }
-  </script>
-
+<script>
+  let open = false;
+  function toggleInfo() {
+    open = !open;
+    document.getElementById('infoPanel').classList.toggle('visible', open);
+    document.getElementById('toggleBtn').textContent = open ? '隱藏資訊' : '查看資訊';
+  }
+</script>
 </body>
 </html>
